@@ -1,12 +1,19 @@
 # 自检额度
 
-一个 Windows 桌面客户端，自动扫描电脑里的所有 Codex 账号，展示每个账号的套餐、剩余额度和重置时间，并支持一键刷新、查看 `auth.json`、导出 CSV / XLSX / JSON。
+一个 Windows 桌面客户端，自动扫描本机所有 Codex 账号，展示套餐、剩余额度和重置时间，支持一键刷新、打开 `auth.json`、导出 CSV / XLSX / JSON。
+
+![卡片视图](docs/dashboard.png)
+
+![表格视图](docs/table.png)
 
 ## 下载使用
 
-到 [Releases](https://github.com/sheyingxin1204/QuotaSelfCheck/releases) 下载最新版的 `QuotaSelfCheck.exe`，放到桌面或其他位置，双击即可运行。
+从 [Releases](https://github.com/sheyingxin1204/QuotaSelfCheck/releases) 下载：
 
-不需要安装 Python，也不需要安装 Excel，窗口、图标和运行组件都已经打包在 exe 里。
+- `QuotaSelfCheck-Setup.exe`：安装版，安装后自动创建桌面快捷方式，推荐大多数用户使用。
+- `QuotaSelfCheck.exe`：绿色单文件，下载后双击即可运行，适合便携使用。
+
+两种版本都不需要安装 Python 或 Excel。
 
 ## 功能
 
@@ -18,11 +25,27 @@
 - 导出 CSV / XLSX / JSON 报告到指定目录。
 - 设置面板可以添加额外 Codex 目录、关闭启动自动刷新、修改导出目录。
 
+## 安全说明
+
+- 程序只读取本机 Codex 的本地文件，不会上传任何邮箱、token、会话或账号数据。
+- 内置 Web 服务只监听 `127.0.0.1`，不会暴露到局域网。
+- 刷新额度时才向 Codex 官方接口发送 `/status` 请求，除此之外没有其他网络请求。
+
+## 代码签名
+
+当前发布版本未使用正式代码签名证书，Windows SmartScreen 可能在首次运行时提示“未知发布者”，点击“仍要运行”即可。要消除该提示，需要购买代码签名证书（例如 DigiCert / Sectigo，或微软 Azure Trusted Signing）后使用 `scripts\sign.ps1` 对 exe 签名。
+
+```powershell
+.\scripts\sign.ps1 -ExePath dist\QuotaSelfCheck.exe -Thumbprint <证书指纹>
+```
+
+自签名证书只能让文件带上签名信息，Windows 仍然不认识发布者，无法消除 SmartScreen 提示。
+
 ## 常见问题
 
 ### 第一次启动有点慢
 
-单文件 exe 启动时需要先解压到临时目录，第一次会比之后慢几秒，这是正常的。
+绿色单文件版启动时需要先解压到临时目录，第一次会比之后慢几秒。安装版使用目录模式，启动更快。
 
 ### 提示没有额度数据
 
@@ -32,25 +55,33 @@
 
 会。每次点“刷新”都会向 Codex 发送一次 `/status` 请求，消耗少量 token。可以关闭“启动时自动刷新”，只在需要时手动刷新。
 
-### 需要 Windows 吗
-
-当前发布版是 Windows 客户端，需要 Win10 / Win11。系统一般自带 WebView2 运行时，极少数精简系统可能需要在微软官网安装 WebView2。
-
 ## 开源协作
 
-仓库是公开只读的：任何人都可以查看代码，但不会被授予直接推送权限。外部贡献请通过 fork 后提交 Pull Request，所有合并由仓库维护者审阅后完成。
+仓库是公开只读的：任何人都可以查看代码，但不会被授予直接推送权限。外部贡献请通过 fork 后提交 Pull Request，所有合并由仓库维护者审阅后完成。本项目使用 [MIT License](LICENSE)。
 
 ## 开发者构建
 
-源码目录 `quota_check/` 是客户端核心模块。需要从源码构建时：
+源码目录 `quota_check/` 是客户端核心模块。
+
+构建绿色单文件版并创建桌面快捷方式：
 
 ```powershell
 .\build_exe.ps1
 ```
 
-构建产物在 `dist\QuotaSelfCheck.exe`，并会自动在桌面创建 `自检额度.lnk` 快捷方式。
+构建安装版（需要 Inno Setup 6）：
+
+```powershell
+.\scripts\build_setup.ps1
+```
+
+构建产物在 `dist\`：
+
+- `QuotaSelfCheck.exe`：绿色单文件版
+- `QuotaSelfCheck\`：目录版，安装包使用的源
+- `QuotaSelfCheck-Setup.exe`：安装版
 
 ## 已知边界
 
 - 额度数据来自 Codex 写入的 `token_count` 事件，字段结构由 Codex 决定，解析器对多种字段形态做了兼容。
-- 本地服务只监听 `127.0.0.1`，不会暴露到局域网。
+- 当前发布版是 Windows 客户端，需要 Win10 / Win11，并具备 WebView2 运行时（系统一般自带）。

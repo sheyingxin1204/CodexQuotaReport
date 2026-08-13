@@ -3,7 +3,7 @@
 
   var state = {
     data: null,
-    view: "cards",
+    view: new URLSearchParams(location.search).get("view") === "table" ? "table" : "cards",
     search: "",
     planFilter: "",
     statusFilter: "",

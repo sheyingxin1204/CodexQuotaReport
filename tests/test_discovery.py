@@ -4,8 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from codex_quota.config import AppConfig
-from codex_quota.discovery import discover_code_homes, is_code_home
+from quota_check.config import AppConfig
+from quota_check.discovery import discover_code_homes, is_code_home
 
 
 class DiscoveryTests(unittest.TestCase):
@@ -36,7 +36,7 @@ class DiscoveryTests(unittest.TestCase):
 
             original_home = Path.home
             try:
-                import codex_quota.discovery as discovery
+                import quota_check.discovery as discovery
 
                 discovery.Path.home = staticmethod(lambda: home)
                 candidates = discover_code_homes(config)

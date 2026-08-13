@@ -5,8 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from codex_quota.config import AppConfig
-from codex_quota.sessions import (
+from quota_check.config import AppConfig
+from quota_check.sessions import (
     build_snapshot_from_event,
     find_latest_rate_limit_event,
     load_account_snapshot,

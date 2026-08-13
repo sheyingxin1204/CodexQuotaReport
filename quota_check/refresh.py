@@ -97,7 +97,7 @@ def refresh_account(code_home: Path, timeout_seconds: int = 60) -> RefreshResult
             message="codex CLI not found on PATH",
         )
 
-    workdir = Path(tempfile.mkdtemp(prefix="codex-quota-refresh-"))
+    workdir = Path(tempfile.mkdtemp(prefix="quota-check-refresh-"))
     env = os.environ.copy()
     env["CODEX_HOME"] = str(code_home)
     args = ["exec", "--skip-git-repo-check", "--ignore-user-config", "--json", "/status"]

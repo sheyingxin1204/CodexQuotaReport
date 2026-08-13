@@ -8,7 +8,7 @@ from typing import Any
 
 
 def default_config_dir() -> Path:
-    return Path(os.environ.get("CODEX_QUOTA_CONFIG_DIR", str(Path.home() / ".codex_quota")))
+    return Path(os.environ.get("QUOTA_CHECK_CONFIG_DIR", str(Path.home() / ".quota_check")))
 
 
 @dataclass

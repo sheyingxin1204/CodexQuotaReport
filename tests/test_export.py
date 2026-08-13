@@ -4,10 +4,10 @@ import io
 import zipfile
 import unittest
 
-from codex_quota.export import export_csv_bytes, export_xlsx_bytes, build_rows
-from codex_quota.models import AccountSnapshot, RateLimit
-from codex_quota.report import ReportResult
-from codex_quota.discovery import CodeHomeCandidate
+from quota_check.export import export_csv_bytes, export_xlsx_bytes, build_rows
+from quota_check.models import AccountSnapshot, RateLimit
+from quota_check.report import ReportResult
+from quota_check.discovery import CodeHomeCandidate
 
 
 def sample_report() -> ReportResult:

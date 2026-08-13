@@ -32,7 +32,7 @@ def run_desktop(config: AppConfig) -> int:
         return 1
 
     window = webview.create_window(
-        "codex自检额度",
+        "自检额度",
         url,
         width=1280,
         height=860,

@@ -16,24 +16,24 @@ if (-not (Test-Path (Join-Path $venv 'Scripts\python.exe'))) {
     --noconfirm `
     --clean `
     --onefile `
-    --name CodexQuota `
+    --name QuotaSelfCheck `
     --icon (Join-Path $PSScriptRoot 'build\icon.ico') `
     --version-file (Join-Path $PSScriptRoot 'scripts\version_info.txt') `
     --collect-all webview `
-    --add-data "codex_quota\web;codex_quota\web" `
+    --add-data "quota_check\web;quota_check\web" `
     (Join-Path $PSScriptRoot 'run.py')
 
 Write-Host ''
 Write-Host 'Build complete:'
-Write-Host (Join-Path $PSScriptRoot 'dist\CodexQuota.exe')
+Write-Host (Join-Path $PSScriptRoot 'dist\QuotaSelfCheck.exe')
 
 $desktop = [Environment]::GetFolderPath('Desktop')
 $cn = [string][char]0x81EA + [string][char]0x68C0 + [string][char]0x989D + [string][char]0x5EA6
 $lnkPath = Join-Path $desktop ('codex' + $cn + '.lnk')
 $ws = New-Object -ComObject WScript.Shell
 $shortcut = $ws.CreateShortcut($lnkPath)
-$shortcut.TargetPath = Join-Path $PSScriptRoot 'dist\CodexQuota.exe'
+$shortcut.TargetPath = Join-Path $PSScriptRoot 'dist\QuotaSelfCheck.exe'
 $shortcut.WorkingDirectory = Join-Path $PSScriptRoot 'dist'
-$shortcut.Description = 'Codex Quota Desktop Client'
+$shortcut.Description = 'QuotaSelfCheck Desktop Client'
 $shortcut.Save()
 Write-Host "Desktop shortcut: $lnkPath"

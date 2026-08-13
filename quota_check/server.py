@@ -22,7 +22,7 @@ from .report import ReportResult, build_report
 def _web_dir() -> Path:
     frozen_base = getattr(sys, "_MEIPASS", None)
     if frozen_base:
-        return Path(frozen_base) / "codex_quota" / "web"
+        return Path(frozen_base) / "quota_check" / "web"
     return Path(__file__).resolve().parent / "web"
 
 
@@ -54,7 +54,7 @@ class QuotaState:
             target=self._run_load,
             args=(refresh,),
             daemon=True,
-            name="codex-quota-load",
+            name="quota-check-load",
         )
         thread.start()
 
@@ -65,7 +65,7 @@ class QuotaState:
                 self.report = report
                 self.refreshed_at = datetime.now().astimezone().isoformat(timespec="seconds")
                 self.codex_path = str(find_codex_executable() or "")
-        except Exception as exc:  # keep the UI alive even if discovery fails
+        except Exception as exc:  # 发现失败时保留已有界面，不让窗口直接退出
             self.set_progress(f"加载失败: {exc}")
         finally:
             with self.lock:
@@ -88,7 +88,7 @@ def _make_handler(state: QuotaState) -> type[BaseHTTPRequestHandler]:
     web_root = _web_dir()
 
     class Handler(BaseHTTPRequestHandler):
-        server_version = "CodexQuota/" + __version__
+        server_version = "QuotaSelfCheck/" + __version__
 
         def log_message(self, format: str, *args: Any) -> None:
             return
@@ -195,19 +195,19 @@ def _make_handler(state: QuotaState) -> type[BaseHTTPRequestHandler]:
                 self._send_bytes(
                     export_xlsx_bytes(rows),
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    "CodexQuotaReport.xlsx",
+                    "QuotaSelfCheck.xlsx",
                 )
             elif fmt == "json":
                 self._send_bytes(
                     export_json_bytes(report),
                     "application/json; charset=utf-8",
-                    "CodexQuotaReport.json",
+                    "QuotaSelfCheck.json",
                 )
             else:
                 self._send_bytes(
                     export_csv_bytes(rows),
                     "text/csv; charset=utf-8",
-                    "CodexQuotaReport.csv",
+                    "QuotaSelfCheck.csv",
                 )
 
     return Handler

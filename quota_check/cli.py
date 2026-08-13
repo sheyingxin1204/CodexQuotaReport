@@ -13,7 +13,7 @@ from .report import build_report
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="codex-quota",
+        prog="quota-check",
         description="Check all local Codex accounts and show remaining quotas.",
     )
     mode = parser.add_mutually_exclusive_group()

@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from codex_quota.auth import decode_jwt_payload, read_auth_info
+from quota_check.auth import decode_jwt_payload, read_auth_info
 
 from tests.helpers import make_jwt
 

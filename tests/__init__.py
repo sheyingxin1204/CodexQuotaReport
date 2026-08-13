@@ -1,1 +1,1 @@
-"""Tests for codex_quota."""
+"""Tests for quota_check."""

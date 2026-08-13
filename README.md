@@ -1,10 +1,10 @@
-# codex自检额度
+# 自检额度
 
 一个 Windows 桌面客户端，自动扫描电脑里的所有 Codex 账号，展示每个账号的套餐、剩余额度和重置时间，并支持一键刷新、查看 `auth.json`、导出 CSV / XLSX / JSON。
 
 ## 下载使用
 
-到 [Releases](https://github.com/sheyingxin1204/CodexQuotaReport/releases) 下载最新版的 `CodexQuota.exe`，放到桌面或其他位置，双击即可运行。
+到 [Releases](https://github.com/sheyingxin1204/QuotaSelfCheck/releases) 下载最新版的 `QuotaSelfCheck.exe`，放到桌面或其他位置，双击即可运行。
 
 不需要安装 Python，也不需要安装 Excel，窗口、图标和运行组件都已经打包在 exe 里。
 
@@ -42,13 +42,13 @@
 
 ## 开发者构建
 
-源码目录 `codex_quota/` 是客户端核心模块。需要从源码构建时：
+源码目录 `quota_check/` 是客户端核心模块。需要从源码构建时：
 
 ```powershell
 .\build_exe.ps1
 ```
 
-构建产物在 `dist\CodexQuota.exe`，并会自动在桌面创建 `codex自检额度.lnk` 快捷方式。
+构建产物在 `dist\QuotaSelfCheck.exe`，并会自动在桌面创建 `自检额度.lnk` 快捷方式。
 
 ## 已知边界
 

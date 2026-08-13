@@ -659,7 +659,7 @@ $displayRows = foreach ($row in $rows) {
     Convert-RowToDisplayRecord -Row $row
 }
 
-$legacyOutputDir = Join-Path $HOME 'CodexQuotaReports'
+$legacyOutputDir = Join-Path $HOME 'QuotaSelfChecks'
 Clear-OldReportFiles -Directories @($legacyOutputDir, $OutputDir)
 
 $xlsxPath = Export-ReportExcel -Rows $displayRows -Directory $OutputDir

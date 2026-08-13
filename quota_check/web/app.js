@@ -508,7 +508,7 @@
         return data;
       })
       .catch(function () {
-        // server may be starting; retry on next poll
+        // 服务刚启动时可能还没就绪，下一次轮询会重试
       });
   }
 

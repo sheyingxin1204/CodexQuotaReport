@@ -3,8 +3,8 @@ from __future__ import annotations
 import threading
 import unittest
 
-from codex_quota.config import AppConfig
-from codex_quota.desktop import create_app_server, is_webview_available
+from quota_check.config import AppConfig
+from quota_check.desktop import create_app_server, is_webview_available
 
 
 class DesktopTests(unittest.TestCase):

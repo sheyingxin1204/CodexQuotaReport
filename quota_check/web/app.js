@@ -118,6 +118,38 @@
     return span;
   }
 
+  function refreshIcon() {
+    var span = document.createElement("span");
+    span.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      '<path d="M21 12a9 9 0 1 1-2.64-6.36"/>' +
+      '<path d="M21 3v6h-6"/>' +
+      "</svg>";
+    return span;
+  }
+
+  function makeRefreshButton(codeHome, refreshing) {
+    var button = el("button", "mini-btn" + (refreshing ? " spinning" : ""));
+    button.type = "button";
+    button.title = refreshing ? "正在刷新此账号" : "单独刷新此账号";
+    button.disabled = !!refreshing;
+    button.appendChild(refreshIcon());
+    button.addEventListener("click", function () {
+      fetch("/api/refresh-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code_home: codeHome })
+      })
+        .then(function (response) {
+          return response.json();
+        })
+        .then(function () {
+          fetchState();
+        });
+    });
+    return button;
+  }
+
   function makeAuthButton(codeHome) {
     var button = el("button", "auth-link");
     button.type = "button";
@@ -249,6 +281,9 @@
     );
     card.appendChild(details);
     var actionRow = el("div", "card-action");
+    actionRow.appendChild(
+      makeRefreshButton(account.code_home, isAccountRefreshing(account.code_home))
+    );
     actionRow.appendChild(makeAuthButton(account.code_home));
     card.appendChild(actionRow);
 
@@ -335,6 +370,9 @@
       );
       row.appendChild(statusCell);
       var actionCell = el("td", "actions-cell");
+      actionCell.appendChild(
+        makeRefreshButton(account.code_home, isAccountRefreshing(account.code_home))
+      );
       actionCell.appendChild(makeAuthButton(account.code_home));
       row.appendChild(actionCell);
       tbody.appendChild(row);
@@ -476,6 +514,39 @@
       ? "codex: " + data.codex_path
       : "codex CLI 未找到，仅读取历史会话数据";
 
+    var updateBanner = document.getElementById("updateBanner");
+    if (data.update_available && !state.dismissedUpdate) {
+      updateBanner.classList.remove("hidden");
+      document.getElementById("updateText").textContent =
+        "发现新版本 v" + data.latest_version + "（当前 v" + data.version + "）";
+      document.getElementById("updateLink").href =
+        data.latest_release_url || "https://github.com/sheyingxin1204/QuotaSelfCheck/releases";
+    } else {
+      updateBanner.classList.add("hidden");
+    }
+
+    var lowBanner = document.getElementById("lowQuotaBanner");
+    var threshold = (data.config && data.config.low_quota_threshold) || 10;
+    var lowAccounts = (data.report && data.report.accounts || []).filter(function (account) {
+      var limits = [account.weekly, account.five_hour];
+      return limits.some(function (limit) {
+        return limit && limit.remaining_percent !== null && limit.remaining_percent <= threshold;
+      });
+    });
+    if (lowAccounts.length) {
+      lowBanner.classList.remove("hidden");
+      lowBanner.textContent =
+        "额度提醒：以下账号剩余额度偏低（阈值 " + threshold + "%）：" +
+        lowAccounts
+          .map(function (account) {
+            return account.label + "（" + (account.email || "未登录") + "）";
+          })
+          .join("、");
+    } else {
+      lowBanner.classList.add("hidden");
+      lowBanner.textContent = "";
+    }
+
     var progress = document.getElementById("progressPanel");
     if (data.refreshing) {
       progress.classList.remove("hidden");
@@ -513,7 +584,11 @@
   }
 
   function updatePolling() {
-    var shouldPoll = state.data && state.data.refreshing;
+    var data = state.data;
+    var shouldPoll =
+      data &&
+      (data.refreshing ||
+        (data.refreshing_accounts && data.refreshing_accounts.length > 0));
     if (shouldPoll && !state.pollTimer) {
       state.pollTimer = setInterval(fetchState, 1500);
     }
@@ -571,7 +646,21 @@
     });
     menu.querySelectorAll("button").forEach(function (button) {
       button.addEventListener("click", function () {
-        window.open("/api/export?format=" + encodeURIComponent(button.dataset.format), "_blank");
+        if (button.dataset.action === "open-output") {
+          fetch("/api/open-output", { method: "POST" })
+            .then(function (response) {
+              return response.json();
+            })
+            .then(function (data) {
+              if (data.ok) {
+                showToast("已打开导出目录");
+              } else {
+                showToast(data.error || "无法打开导出目录", true);
+              }
+            });
+        } else {
+          window.open("/api/export?format=" + encodeURIComponent(button.dataset.format), "_blank");
+        }
         menu.classList.add("hidden");
       });
     });
@@ -589,6 +678,9 @@
       document.getElementById("cfgScanHome").checked = config.scan_home;
       document.getElementById("cfgScanProfiles").checked = config.scan_profiles;
       document.getElementById("cfgRefreshOnStart").checked = config.refresh_on_start;
+      document.getElementById("cfgNotifyLow").checked = config.notify_low_quota;
+      document.getElementById("cfgCheckUpdates").checked = config.check_updates;
+      document.getElementById("cfgLowThreshold").value = config.low_quota_threshold;
       document.getElementById("cfgTimeout").value = config.refresh_timeout_seconds;
       document.getElementById("cfgOutputDir").value = config.output_dir || "";
       pathList.textContent = "";
@@ -620,6 +712,10 @@
     document.getElementById("settingsBtn").addEventListener("click", openSettings);
     document.getElementById("closeSettings").addEventListener("click", closeSettings);
     document.getElementById("cancelSettings").addEventListener("click", closeSettings);
+    document.getElementById("openDiagnostics").addEventListener("click", function () {
+      dialog.classList.add("hidden");
+      openDiagnostics();
+    });
     document.getElementById("addPath").addEventListener("click", function () {
       addPathRow("");
     });
@@ -639,6 +735,9 @@
         scan_home: document.getElementById("cfgScanHome").checked,
         scan_profiles: document.getElementById("cfgScanProfiles").checked,
         refresh_on_start: document.getElementById("cfgRefreshOnStart").checked,
+        notify_low_quota: document.getElementById("cfgNotifyLow").checked,
+        check_updates: document.getElementById("cfgCheckUpdates").checked,
+        low_quota_threshold: parseInt(document.getElementById("cfgLowThreshold").value, 10) || 10,
         refresh_timeout_seconds: parseInt(document.getElementById("cfgTimeout").value, 10) || 60,
         output_dir: document.getElementById("cfgOutputDir").value.trim(),
         extra_code_homes: paths
@@ -658,10 +757,65 @@
     });
   }
 
+  function isAccountRefreshing(codeHome) {
+    var data = state.data;
+    return !!(
+      data &&
+      data.refreshing_accounts &&
+      data.refreshing_accounts.indexOf(codeHome) >= 0
+    );
+  }
+
+  function openDiagnostics() {
+    var dialog = document.getElementById("diagnosticsDialog");
+    fetch("/api/diagnostics")
+      .then(function (response) {
+        return response.json();
+      })
+      .then(function (data) {
+        document.getElementById("diagnosticsText").textContent = JSON.stringify(data, null, 2);
+        dialog.classList.remove("hidden");
+      })
+      .catch(function () {
+        document.getElementById("diagnosticsText").textContent = "获取诊断信息失败";
+        dialog.classList.remove("hidden");
+      });
+  }
+
+  function wireDiagnostics() {
+    var dialog = document.getElementById("diagnosticsDialog");
+    function close() {
+      dialog.classList.add("hidden");
+    }
+    document.getElementById("closeDiagnostics").addEventListener("click", close);
+    document.getElementById("closeDiagnosticsBtn").addEventListener("click", close);
+    dialog.addEventListener("click", function (event) {
+      if (event.target === dialog) {
+        close();
+      }
+    });
+    document.getElementById("copyDiagnostics").addEventListener("click", function () {
+      var text = document.getElementById("diagnosticsText").textContent;
+      navigator.clipboard
+        .writeText(text)
+        .then(function () {
+          showToast("诊断内容已复制");
+        })
+        .catch(function () {
+          showToast("复制失败", true);
+        });
+    });
+  }
+
   function init() {
     wireToolbar();
     wireExport();
     wireSettings();
+    wireDiagnostics();
+    document.getElementById("dismissUpdate").addEventListener("click", function () {
+      state.dismissedUpdate = true;
+      document.getElementById("updateBanner").classList.add("hidden");
+    });
     fetchState();
   }
 

@@ -36,6 +36,7 @@
             <button data-format="csv">导出 CSV</button>
             <button data-format="xlsx">导出 XLSX</button>
             <button data-format="json">导出 JSON</button>
+            <button data-action="open-output">打开导出目录</button>
           </div>
         </div>
         <button id="settingsBtn" class="icon-btn" title="设置" aria-label="设置">
@@ -46,6 +47,13 @@
         </button>
       </div>
     </header>
+
+    <div id="updateBanner" class="update-banner hidden">
+      <span id="updateText">发现新版本</span>
+      <a id="updateLink" href="#" target="_blank" rel="noopener">前往下载</a>
+      <button id="dismissUpdate" class="close-banner" title="关闭" aria-label="关闭">×</button>
+    </div>
+    <div id="lowQuotaBanner" class="low-quota hidden"></div>
 
     <section id="summary" class="summary" aria-label="汇总"></section>
 
@@ -133,6 +141,18 @@
           <input type="checkbox" id="cfgRefreshOnStart">
           <span>启动时自动刷新额度</span>
         </label>
+        <label class="check-row">
+          <input type="checkbox" id="cfgNotifyLow">
+          <span>额度偏低时弹出提醒</span>
+        </label>
+        <label class="check-row">
+          <input type="checkbox" id="cfgCheckUpdates">
+          <span>启动时检查新版本</span>
+        </label>
+        <label class="field">
+          <span>低额度提醒阈值（剩余百分比）</span>
+          <input type="number" id="cfgLowThreshold" min="1" max="100">
+        </label>
         <label class="field">
           <span>单账号刷新超时（秒）</span>
           <input type="number" id="cfgTimeout" min="5" max="300">
@@ -148,8 +168,30 @@
         </div>
       </div>
       <div class="dialog-actions">
+        <button id="openDiagnostics" class="ghost-btn" type="button">环境诊断</button>
         <button id="cancelSettings" class="ghost-btn" type="button">取消</button>
         <button id="saveSettings" class="primary-btn" type="button">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="diagnosticsDialog" class="dialog-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="diagnosticsTitle">
+    <div class="dialog diagnostics-dialog">
+      <div class="dialog-head">
+        <h2 id="diagnosticsTitle">环境诊断</h2>
+        <button id="closeDiagnostics" class="icon-btn" title="关闭" aria-label="关闭">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <pre id="diagnosticsText" class="diagnostics-text"></pre>
+      </div>
+      <div class="dialog-actions">
+        <button id="copyDiagnostics" class="ghost-btn" type="button">复制内容</button>
+        <button id="closeDiagnosticsBtn" class="primary-btn" type="button">关闭</button>
       </div>
     </div>
   </div>

@@ -17,6 +17,9 @@ class AppConfig:
     scan_home: bool = True
     scan_profiles: bool = True
     refresh_on_start: bool = True
+    notify_low_quota: bool = True
+    low_quota_threshold: int = 10
+    check_updates: bool = True
     refresh_timeout_seconds: int = 60
     output_dir: str = ""
     max_session_files: int = 30
@@ -53,6 +56,9 @@ class AppConfig:
             "scan_home": self.scan_home,
             "scan_profiles": self.scan_profiles,
             "refresh_on_start": self.refresh_on_start,
+            "notify_low_quota": self.notify_low_quota,
+            "low_quota_threshold": self.low_quota_threshold,
+            "check_updates": self.check_updates,
             "refresh_timeout_seconds": self.refresh_timeout_seconds,
             "output_dir": self.output_dir,
             "max_session_files": self.max_session_files,

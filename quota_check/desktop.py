@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import threading
 from http.server import ThreadingHTTPServer
+from pathlib import Path
 
 from .config import AppConfig
 from .server import QuotaState, _make_handler
@@ -22,6 +23,7 @@ def run_desktop(config: AppConfig) -> int:
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     state.start_load()
+    state.start_update_check()
 
     try:
         import webview
@@ -39,11 +41,25 @@ def run_desktop(config: AppConfig) -> int:
         min_size=(960, 640),
         background_color="#f4f6fa",
     )
+    state.set_notification_handler(
+        lambda title, message: _notify(webview, title, message)
+    )
+    tray = _start_tray(window)
+
+    def on_closing() -> bool:
+        if tray is not None:
+            window.hide()
+            return False
+        return True
+
+    window.events.closing += on_closing
     try:
         webview.start()
     except KeyboardInterrupt:
         pass
     finally:
+        if tray is not None:
+            tray.stop()
         server.shutdown()
         server.server_close()
     return 0
@@ -56,3 +72,42 @@ def is_webview_available() -> bool:
         return True
     except Exception:
         return False
+
+
+def _notify(webview, title: str, message: str) -> None:
+    try:
+        windows = getattr(webview, "windows", None)
+        if windows:
+            windows[0].create_notification(title, message)
+    except Exception:
+        pass
+
+
+def _start_tray(window):
+    try:
+        import pystray
+        from PIL import Image
+    except Exception:
+        return None
+
+    icon_path = Path(__file__).resolve().parents[1] / "build" / "icon.ico"
+    try:
+        image = Image.open(icon_path)
+    except Exception:
+        image = Image.new("RGBA", (64, 64), (37, 99, 235, 255))
+
+    def show():
+        window.show()
+        window.restore()
+
+    def quit_app(icon, item):
+        icon.stop()
+        window.destroy()
+
+    menu = pystray.Menu(
+        pystray.MenuItem("显示窗口", lambda icon, item: show(), default=True),
+        pystray.MenuItem("退出", quit_app),
+    )
+    tray = pystray.Icon("quota-self-check", image, "自检额度", menu)
+    tray.run_detached()
+    return tray

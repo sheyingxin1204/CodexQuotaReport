@@ -295,6 +295,53 @@ body {
   font-size: 13px;
 }
 
+.update-banner,
+.low-quota {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.update-banner {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1e40af;
+}
+
+.update-banner a {
+  color: #1d4ed8;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.low-quota {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.close-banner {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.close-banner:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
 .spinner {
   width: 16px;
   height: 16px;
@@ -556,6 +603,44 @@ body {
   height: 14px;
 }
 
+.mini-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.mini-btn:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.mini-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.mini-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.mini-btn.spinning svg {
+  animation: spin 0.9s linear infinite;
+}
+
+.card-action {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .table-view {
   overflow-x: auto;
   border: 1px solid var(--border);
@@ -598,6 +683,10 @@ body {
 
 .table-view .actions-cell {
   white-space: nowrap;
+}
+
+.table-view .actions-cell .mini-btn {
+  margin-right: 6px;
 }
 
 .table-view .email-cell {
@@ -754,6 +843,26 @@ body {
   gap: 8px;
   padding: 14px 18px;
   border-top: 1px solid var(--border);
+}
+
+.diagnostics-dialog {
+  width: min(760px, 100%);
+}
+
+.diagnostics-text {
+  max-height: 420px;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--text);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 .toast {

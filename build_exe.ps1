@@ -8,7 +8,7 @@ if (-not (Test-Path (Join-Path $venv 'Scripts\python.exe'))) {
 }
 
 & (Join-Path $venv 'Scripts\python.exe') -m pip install --disable-pip-version-check --upgrade pip
-& (Join-Path $venv 'Scripts\python.exe') -m pip install --disable-pip-version-check pyinstaller pywebview pillow
+& (Join-Path $venv 'Scripts\python.exe') -m pip install --disable-pip-version-check pyinstaller pywebview pystray pillow
 
 & (Join-Path $venv 'Scripts\python.exe') (Join-Path $PSScriptRoot 'scripts\generate_icon.py')
 

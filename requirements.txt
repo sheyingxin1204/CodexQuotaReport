@@ -1,3 +1,4 @@
 # 运行时零第三方依赖：仅使用 Python 标准库。
 # 如需原生桌面窗口：pip install pywebview
-# 打包成 exe 时只需额外安装：pip install pyinstaller pywebview
+# 如需系统托盘：pip install pystray
+# 打包成 exe 时只需额外安装：pip install pyinstaller pywebview pystray pillow

@@ -69,6 +69,8 @@
 .\build_exe.ps1
 ```
 
+系统安装了 [UPX](https://github.com/upx/upx) 时，PyInstaller 会自动用它压缩部分二进制，减小单文件体积；没有 UPX 也不影响构建。
+
 构建安装版（需要 Inno Setup 6）：
 
 ```powershell

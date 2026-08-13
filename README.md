@@ -95,6 +95,10 @@ Windows 下运行：
 python -m unittest discover -s tests -v
 ```
 
+## 开源协作方式
+
+仓库是公开只读的：任何人都可以查看代码，但不会被授予直接推送权限。外部贡献请通过 fork 后提交 Pull Request，所有合并由仓库维护者审阅后完成，防止未经审阅的修改直接进入主分支。
+
 ## 已知边界
 
 - 额度数据来自 Codex 写入的 `token_count` 事件，字段结构由 Codex 决定；解析器对 `primary` / `secondary` / `individual_limit` 和多种字段名做了兼容。

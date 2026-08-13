@@ -85,7 +85,7 @@ Windows 下运行：
 
 构建产物在 `dist\CodexQuota.exe`，目标机器只需要有网络和 codex CLI 即可，不需要安装 Python 或 Excel。
 
-构建完成后会自动在桌面创建 `Codex额度管家.lnk` 快捷方式，双击即可启动原生客户端窗口。exe 会先启动本地额度服务，再打开内置窗口展示仪表盘；窗口组件、图标和版本信息随 exe 一起打包，不依赖本机 Python 或浏览器。
+构建完成后会自动在桌面创建 `codex自检额度.lnk` 快捷方式，双击即可启动原生客户端窗口。exe 会先启动本地额度服务，再打开内置窗口展示仪表盘；窗口组件、图标和版本信息随 exe 一起打包，不依赖本机 Python 或浏览器。
 
 如果源码方式运行时报“原生窗口组件不可用”，先执行 `python -m pip install pywebview`。
 
@@ -104,9 +104,9 @@ python -m unittest discover -s tests -v
 构建并推送新版本后，在项目目录执行：
 
 ```powershell
-git tag v0.3.0
-git push origin v0.3.0
-gh release create v0.3.0 dist\CodexQuota.exe --title "CodexQuota v0.3.0" --notes "桌面客户端：自定义图标、名称和版本信息"
+git tag v0.3.1
+git push origin v0.3.1
+gh release create v0.3.1 dist\CodexQuota.exe --title "codex自检额度 v0.3.1" --notes "自检额度客户端：固定盾牌对勾图标、中文客户端名称"
 ```
 
 发布内容会包含 `CodexQuota.exe` 和对应 tag 的源码快照，用户可以直接在 GitHub Releases 页面下载。

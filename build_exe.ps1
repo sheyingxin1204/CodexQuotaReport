@@ -28,8 +28,8 @@ Write-Host 'Build complete:'
 Write-Host (Join-Path $PSScriptRoot 'dist\CodexQuota.exe')
 
 $desktop = [Environment]::GetFolderPath('Desktop')
-$cn = [string][char]0x989D + [string][char]0x5EA6 + [string][char]0x7BA1 + [string][char]0x5BB6
-$lnkPath = Join-Path $desktop ('Codex' + $cn + '.lnk')
+$cn = [string][char]0x81EA + [string][char]0x68C0 + [string][char]0x989D + [string][char]0x5EA6
+$lnkPath = Join-Path $desktop ('codex' + $cn + '.lnk')
 $ws = New-Object -ComObject WScript.Shell
 $shortcut = $ws.CreateShortcut($lnkPath)
 $shortcut.TargetPath = Join-Path $PSScriptRoot 'dist\CodexQuota.exe'

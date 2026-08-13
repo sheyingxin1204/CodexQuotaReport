@@ -39,35 +39,32 @@ def build_icon() -> Image.Image:
     overlay = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
 
-    ring_box = (116, 116, WIDTH - 116, HEIGHT - 116)
-    draw.arc(
-        ring_box,
-        start=20,
-        end=300,
-        fill=(255, 255, 255, 235),
-        width=56,
-    )
-    dot_radius = 34
-    center = (WIDTH // 2, HEIGHT // 2)
-    draw.ellipse(
-        (
-            center[0] - dot_radius,
-            center[1] - dot_radius,
-            center[0] + dot_radius,
-            center[1] + dot_radius,
-        ),
-        fill=(255, 255, 255, 245),
-    )
+    shield = [
+        (WIDTH // 2, 58),
+        (WIDTH - 98, 142),
+        (WIDTH - 98, 278),
+        (WIDTH // 2, 440),
+        (98, 278),
+        (98, 142),
+    ]
+    draw.polygon(shield, outline=(255, 255, 255, 245), width=48)
 
-    check = (0, 255, 0, 0)
+    center = (WIDTH // 2, HEIGHT // 2 + 12)
+    draw.arc(
+        (center[0] - 116, center[1] - 116, center[0] + 116, center[1] + 116),
+        start=135,
+        end=45,
+        fill=(23, 37, 84, 255),
+        width=40,
+    )
     draw.line(
         [
-            (center[0] - 72, center[1] - 6),
-            (center[0] - 22, center[1] + 48),
-            (center[0] + 86, center[1] - 62),
+            (center[0] - 62, center[1] - 6),
+            (center[0] - 18, center[1] + 42),
+            (center[0] + 76, center[1] - 58),
         ],
         fill=(23, 37, 84, 255),
-        width=42,
+        width=36,
         joint="curve",
     )
     image.paste(overlay, (0, 0), overlay)

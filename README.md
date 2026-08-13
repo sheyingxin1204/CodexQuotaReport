@@ -83,9 +83,9 @@ Windows 下运行：
 .\build_exe.ps1
 ```
 
-构建产物在 `dist\CodexQuotaReport.exe`，目标机器只需要有网络和 codex CLI 即可，不需要安装 Python 或 Excel。
+构建产物在 `dist\CodexQuota.exe`，目标机器只需要有网络和 codex CLI 即可，不需要安装 Python 或 Excel。
 
-构建完成后会自动在桌面创建 `CodexQuotaReport.lnk` 快捷方式，双击即可启动原生客户端窗口。exe 会先启动本地额度服务，再打开内置窗口展示仪表盘；窗口组件随 exe 一起打包，不依赖本机 Python 或浏览器。
+构建完成后会自动在桌面创建 `Codex额度管家.lnk` 快捷方式，双击即可启动原生客户端窗口。exe 会先启动本地额度服务，再打开内置窗口展示仪表盘；窗口组件、图标和版本信息随 exe 一起打包，不依赖本机 Python 或浏览器。
 
 如果源码方式运行时报“原生窗口组件不可用”，先执行 `python -m pip install pywebview`。
 
@@ -98,6 +98,18 @@ python -m unittest discover -s tests -v
 ## 开源协作方式
 
 仓库是公开只读的：任何人都可以查看代码，但不会被授予直接推送权限。外部贡献请通过 fork 后提交 Pull Request，所有合并由仓库维护者审阅后完成，防止未经审阅的修改直接进入主分支。
+
+## 发布 Release
+
+构建并推送新版本后，在项目目录执行：
+
+```powershell
+git tag v0.3.0
+git push origin v0.3.0
+gh release create v0.3.0 dist\CodexQuota.exe --title "CodexQuota v0.3.0" --notes "桌面客户端：自定义图标、名称和版本信息"
+```
+
+发布内容会包含 `CodexQuota.exe` 和对应 tag 的源码快照，用户可以直接在 GitHub Releases 页面下载。
 
 ## 已知边界
 

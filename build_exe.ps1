@@ -29,7 +29,7 @@ Write-Host (Join-Path $PSScriptRoot 'dist\QuotaSelfCheck.exe')
 
 $desktop = [Environment]::GetFolderPath('Desktop')
 $cn = [string][char]0x81EA + [string][char]0x68C0 + [string][char]0x989D + [string][char]0x5EA6
-$lnkPath = Join-Path $desktop ('codex' + $cn + '.lnk')
+$lnkPath = Join-Path $desktop ($cn + '.lnk')
 $ws = New-Object -ComObject WScript.Shell
 $shortcut = $ws.CreateShortcut($lnkPath)
 $shortcut.TargetPath = Join-Path $PSScriptRoot 'dist\QuotaSelfCheck.exe'

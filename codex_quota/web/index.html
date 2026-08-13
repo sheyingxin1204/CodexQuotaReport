@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Codex 额度仪表盘</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">CQ</span>
+        <div class="brand-text">
+          <h1>Codex 额度仪表盘</h1>
+          <p id="versionLine" class="muted">正在初始化...</p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <span id="lastUpdated" class="updated muted"></span>
+        <button id="refreshBtn" class="icon-btn" title="刷新额度" aria-label="刷新额度">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
+            <path d="M21 3v6h-6"/>
+          </svg>
+        </button>
+        <div class="menu-wrap">
+          <button id="exportBtn" class="icon-btn" title="导出报告" aria-label="导出报告">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 3v12"/>
+              <path d="m7 10 5 5 5-5"/>
+              <path d="M5 21h14"/>
+            </svg>
+          </button>
+          <div id="exportMenu" class="menu hidden">
+            <button data-format="csv">导出 CSV</button>
+            <button data-format="xlsx">导出 XLSX</button>
+            <button data-format="json">导出 JSON</button>
+          </div>
+        </div>
+        <button id="settingsBtn" class="icon-btn" title="设置" aria-label="设置">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <section id="summary" class="summary" aria-label="汇总"></section>
+
+    <section class="toolbar" aria-label="筛选与排序">
+      <input id="searchInput" type="search" placeholder="搜索邮箱、目录或快捷方式" autocomplete="off">
+      <select id="planFilter" title="按套餐筛选">
+        <option value="">全部套餐</option>
+        <option value="plus">plus</option>
+        <option value="pro">pro</option>
+        <option value="free">free</option>
+        <option value="api">API Key</option>
+      </select>
+      <select id="statusFilter" title="按状态筛选">
+        <option value="">全部状态</option>
+        <option value="ok">正常</option>
+        <option value="warning">预警</option>
+        <option value="critical">危险</option>
+        <option value="no_data">无数据</option>
+        <option value="error">异常</option>
+      </select>
+      <select id="sortSelect" title="排序方式">
+        <option value="email">按邮箱</option>
+        <option value="remaining">按剩余额度</option>
+        <option value="updated">按更新时间</option>
+        <option value="plan">按套餐</option>
+      </select>
+      <div class="segmented" role="group" aria-label="视图切换">
+        <button id="viewCards" class="active" title="卡片视图" aria-label="卡片视图">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7" rx="1"/>
+            <rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/>
+            <rect x="14" y="14" width="7" height="7" rx="1"/>
+          </svg>
+        </button>
+        <button id="viewTable" title="表格视图" aria-label="表格视图">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="8" y1="6" x2="21" y2="6"/>
+            <line x1="8" y1="12" x2="21" y2="12"/>
+            <line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6" x2="3.01" y2="6"/>
+            <line x1="3" y1="12" x2="3.01" y2="12"/>
+            <line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <div id="progressPanel" class="progress hidden">
+      <span class="spinner" aria-hidden="true"></span>
+      <span id="progressText">正在加载...</span>
+    </div>
+
+    <main id="accounts" class="cards" aria-live="polite"></main>
+
+    <footer class="footer">
+      <span>刷新会向 Codex 发送一次 /status 请求，可能产生少量 token 消耗</span>
+      <span id="codexPath" class="muted"></span>
+    </footer>
+
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+  </div>
+
+  <div id="settingsDialog" class="dialog-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="dialog">
+      <div class="dialog-head">
+        <h2 id="settingsTitle">设置</h2>
+        <button id="closeSettings" class="icon-btn" title="关闭" aria-label="关闭">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <label class="check-row">
+          <input type="checkbox" id="cfgScanHome">
+          <span>扫描主目录下的 .codex* 目录</span>
+        </label>
+        <label class="check-row">
+          <input type="checkbox" id="cfgScanProfiles">
+          <span>解析 shell 配置文件里的快捷方式</span>
+        </label>
+        <label class="check-row">
+          <input type="checkbox" id="cfgRefreshOnStart">
+          <span>启动时自动刷新额度</span>
+        </label>
+        <label class="field">
+          <span>单账号刷新超时（秒）</span>
+          <input type="number" id="cfgTimeout" min="5" max="300">
+        </label>
+        <label class="field">
+          <span>报告输出目录</span>
+          <input type="text" id="cfgOutputDir" placeholder="留空使用桌面">
+        </label>
+        <div class="field">
+          <span>额外 Codex 目录</span>
+          <div id="extraPaths" class="path-list"></div>
+          <button id="addPath" class="ghost-btn" type="button">+ 添加目录</button>
+        </div>
+      </div>
+      <div class="dialog-actions">
+        <button id="cancelSettings" class="ghost-btn" type="button">取消</button>
+        <button id="saveSettings" class="primary-btn" type="button">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

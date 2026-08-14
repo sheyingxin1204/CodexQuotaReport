@@ -75,6 +75,7 @@ class AccountSnapshot:
     email: Optional[str] = None
     plan_type: Optional[str] = None
     auth_mode: Optional[str] = None
+    account_id: Optional[str] = None
     weekly: Optional[RateLimit] = None
     five_hour: Optional[RateLimit] = None
     other_limits: list[RateLimit] = field(default_factory=list)
@@ -87,6 +88,7 @@ class AccountSnapshot:
     last_tokens: Optional[int] = None
     credits: Optional[dict[str, Any]] = None
     raw: dict[str, Any] = field(default_factory=dict)
+    related: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
@@ -137,6 +139,7 @@ class AccountSnapshot:
             "email": self.email or "",
             "plan_type": self.plan_type or "",
             "auth_mode": self.auth_mode or "",
+            "account_id": self.account_id or "",
             "weekly": self.weekly.to_dict() if self.weekly else None,
             "five_hour": self.five_hour.to_dict() if self.five_hour else None,
             "other_limits": [limit.to_dict() for limit in self.other_limits],
@@ -148,5 +151,6 @@ class AccountSnapshot:
             "total_tokens": self.total_tokens,
             "last_tokens": self.last_tokens,
             "credits": self.credits,
+            "related": list(self.related),
             "app_name": APP_NAME,
         }

@@ -33,16 +33,21 @@ def _date_text(value: Optional[int], source: Optional[str]) -> str:
 
 def build_rows(result: ReportResult) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    for snapshot in result.snapshots:
+    for snapshot in result.accounts:
         alias = next(
             (c.alias for c in result.candidates if c.code_home == snapshot.code_home),
             None,
+        )
+        related = "、".join(
+            f"{item.get('alias') or item.get('label')}"
+            for item in snapshot.related
         )
         rows.append(
             {
                 "账号邮箱": snapshot.email or "",
                 "套餐": snapshot.plan_type or "",
                 "快捷方式": alias or snapshot.label,
+                "关联目录": related,
                 "主额度剩余": _percent_text(
                     snapshot.weekly.remaining_percent if snapshot.weekly else None
                 ),
@@ -84,7 +89,7 @@ def export_json_bytes(result: ReportResult) -> bytes:
     payload = {
         "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "codex_available": result.codex_available,
-        "accounts": [snapshot.to_dict() for snapshot in result.snapshots],
+        "accounts": [snapshot.to_dict() for snapshot in result.accounts],
         "refresh_results": [item.to_dict() for item in result.refresh_results],
     }
     return json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")

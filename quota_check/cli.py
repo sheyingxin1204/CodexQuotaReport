@@ -48,7 +48,7 @@ def _print_report(config: AppConfig, args: argparse.Namespace) -> int:
     widths = [34, 8, 10, 10, 10, 16, 9]
     print(" ".join(header.ljust(width) for header, width in zip(headers, widths)))
     print("-" * sum(widths) + "-" * (len(widths) - 1))
-    for snapshot in result.snapshots:
+    for snapshot in result.accounts:
         alias = next(
             (c.alias for c in result.candidates if c.code_home == snapshot.code_home),
             None,

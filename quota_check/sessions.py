@@ -134,6 +134,7 @@ def build_snapshot_from_event(
             email=auth_info.get("email"),
             plan_type=auth_info.get("plan_type"),
             auth_mode=auth_info.get("auth_mode"),
+            account_id=auth_info.get("account_id"),
             source_path=source_path,
             error="No token_count rate-limit event found in sessions.",
         )
@@ -169,6 +170,7 @@ def build_snapshot_from_event(
         email=auth_info.get("email"),
         plan_type=rate_limits.get("plan_type") or auth_info.get("plan_type"),
         auth_mode=auth_info.get("auth_mode"),
+        account_id=auth_info.get("account_id"),
         weekly=weekly,
         five_hour=five_hour,
         other_limits=other_limits,

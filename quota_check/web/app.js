@@ -140,12 +140,15 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code_home: codeHome })
       })
-        .then(function (response) {
-          return response.json();
-        })
-        .then(function () {
-          fetchState();
-        });
+      .then(function (response) {
+        return response.json();
+      })
+      .then(function (data) {
+        if (!data.started) {
+          showToast("该账号正在刷新或尚未加载完成", true);
+        }
+        fetchState();
+      });
     });
     return button;
   }
@@ -280,6 +283,22 @@
       )
     );
     card.appendChild(details);
+    if (account.related && account.related.length) {
+      var relatedBox = el("div", "related-box");
+      relatedBox.appendChild(el("div", "related-title", "关联目录"));
+      account.related.forEach(function (item) {
+        var row = el("div", "related-row");
+        var text = el("span", "related-name", (item.alias || item.label) + " · " + item.label);
+        text.title = item.code_home;
+        row.appendChild(text);
+        row.appendChild(
+          makeRefreshButton(item.code_home, isAccountRefreshing(item.code_home))
+        );
+        row.appendChild(makeAuthButton(item.code_home));
+        relatedBox.appendChild(row);
+      });
+      card.appendChild(relatedBox);
+    }
     var actionRow = el("div", "card-action");
     actionRow.appendChild(
       makeRefreshButton(account.code_home, isAccountRefreshing(account.code_home))
@@ -315,7 +334,19 @@
       var row = el("tr");
       var emailCell = el("td", "email-cell", account.email || "未登录");
       row.appendChild(emailCell);
-      row.appendChild(el("td", "", aliasMap[account.code_home] || account.label));
+      var shortcutCell = el("td", "");
+      var aliasText = aliasMap[account.code_home] || account.label;
+      shortcutCell.appendChild(
+        el("span", "", account.related && account.related.length ? aliasText + " +" + account.related.length : aliasText)
+      );
+      if (account.related && account.related.length) {
+        shortcutCell.title = account.related
+          .map(function (item) {
+            return (item.alias || item.label) + " (" + item.label + ")";
+          })
+          .join("、");
+      }
+      row.appendChild(shortcutCell);
       row.appendChild(el("td", "", account.plan_type || "未知"));
       row.appendChild(
         el(

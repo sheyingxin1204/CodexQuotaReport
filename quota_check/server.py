@@ -43,7 +43,10 @@ class QuotaState:
         self.refreshing_accounts: set[str] = set()
         self.account_refresh_results: dict[str, dict[str, Any]] = {}
         self.progress_log: list[str] = []
-        self.lock = threading.Lock()
+        # Progress updates can happen while a state mutation is in progress.
+        # A re-entrant lock keeps those nested updates atomic without blocking
+        # the worker that owns the state lock.
+        self.lock = threading.RLock()
         self.notify_handler: Optional[Any] = None
         self.codex_path = str(find_codex_executable() or "")
         self.latest_version: Optional[str] = None
@@ -93,7 +96,7 @@ class QuotaState:
     def refresh_one(self, code_home: str) -> bool:
         key = os.path.normcase(str(Path(code_home).expanduser()))
         with self.lock:
-            if self.refreshing or key in self.refreshing_accounts:
+            if key in self.refreshing_accounts:
                 return False
             if self.report is None:
                 return False
@@ -144,6 +147,7 @@ class QuotaState:
                         if os.path.normcase(str(existing.code_home)) == key:
                             self.report.snapshots[index] = snapshot
                             break
+                    self.report.refresh_merged()
                 self.refreshed_at = datetime.now().astimezone().isoformat(timespec="seconds")
                 self.account_refresh_results[key] = result.to_dict()
                 self.set_progress(f"{candidate.label} 刷新完成: {result.message}")
@@ -221,7 +225,7 @@ class QuotaState:
                 "webview_available": webview_available,
                 "config": self.config.to_dict(),
                 "candidates": [candidate.to_dict() for candidate in self.report.candidates] if self.report else [],
-                "accounts": [snapshot.to_dict() for snapshot in self.report.snapshots] if self.report else [],
+                "accounts": [snapshot.to_dict() for snapshot in self.report.accounts] if self.report else [],
                 "refresh_results": [result.to_dict() for result in self.report.refresh_results] if self.report else [],
                 "account_refresh_results": dict(self.account_refresh_results),
                 "refreshed_at": self.refreshed_at,
@@ -242,6 +246,7 @@ class QuotaState:
                 "progress_log": list(self.progress_log),
                 "codex_path": self.codex_path,
                 "refreshing_accounts": sorted(self.refreshing_accounts),
+                "account_refresh_results": dict(self.account_refresh_results),
                 "update_available": self.update_available,
                 "latest_version": self.latest_version,
                 "latest_release_url": self.latest_release_url,

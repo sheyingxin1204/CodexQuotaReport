@@ -641,6 +641,34 @@ body {
   gap: 8px;
 }
 
+.related-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.related-title {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.related-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.related-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
 .table-view {
   overflow-x: auto;
   border: 1px solid var(--border);

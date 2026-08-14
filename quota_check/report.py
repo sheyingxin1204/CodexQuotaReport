@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
+import os
 import threading
 from typing import Any, Callable, Optional
 
@@ -22,14 +23,95 @@ class ReportResult:
     candidates: list[CodeHomeCandidate]
     refresh_results: list[RefreshResult] = field(default_factory=list)
     codex_available: bool = False
+    accounts: list[AccountSnapshot] = field(default_factory=list, init=False)
+
+    def __post_init__(self) -> None:
+        self.refresh_merged()
+
+    def refresh_merged(self) -> None:
+        self.accounts = merge_account_snapshots(self.snapshots, self.candidates)
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "accounts": [snapshot.to_dict() for snapshot in self.snapshots],
+            "accounts": [snapshot.to_dict() for snapshot in self.accounts],
             "candidates": [candidate.to_dict() for candidate in self.candidates],
             "refresh_results": [result.to_dict() for result in self.refresh_results],
             "codex_available": self.codex_available,
         }
+
+
+def _account_key(snapshot: AccountSnapshot) -> str:
+    if snapshot.account_id:
+        return "id:" + str(snapshot.account_id).strip().lower()
+    if snapshot.email:
+        return "mail:" + snapshot.email.strip().lower()
+    return "home:" + os.path.normcase(str(snapshot.code_home))
+
+
+def _alias_map(candidates: list[CodeHomeCandidate]) -> dict[str, str]:
+    return {
+        os.path.normcase(str(candidate.code_home)): candidate.alias or ""
+        for candidate in candidates
+    }
+
+
+def merge_account_snapshots(
+    snapshots: list[AccountSnapshot],
+    candidates: list[CodeHomeCandidate],
+) -> list[AccountSnapshot]:
+    aliases = _alias_map(candidates)
+    groups: dict[str, list[AccountSnapshot]] = {}
+    order: list[str] = []
+    for snapshot in snapshots:
+        key = _account_key(snapshot)
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(snapshot)
+
+    merged: list[AccountSnapshot] = []
+    for key in order:
+        group = groups[key]
+        primary = _pick_primary(group)
+        related: list[dict[str, Any]] = []
+        for snapshot in group:
+            if snapshot is primary:
+                continue
+            related.append(
+                {
+                    "label": snapshot.label,
+                    "alias": aliases.get(os.path.normcase(str(snapshot.code_home)), ""),
+                    "code_home": str(snapshot.code_home),
+                    "status": snapshot.status,
+                    "error": snapshot.error,
+                    "snapshot_at_utc": (
+                        snapshot.snapshot_at_utc.isoformat(timespec="seconds")
+                        if snapshot.snapshot_at_utc
+                        else None
+                    ),
+                    "weekly_remaining": (
+                        snapshot.weekly.remaining_percent if snapshot.weekly else None
+                    ),
+                    "five_hour_remaining": (
+                        snapshot.five_hour.remaining_percent if snapshot.five_hour else None
+                    ),
+                }
+            )
+        primary.related = related
+        merged.append(primary)
+    return merged
+
+
+def _pick_primary(group: list[AccountSnapshot]) -> AccountSnapshot:
+    ranked = sorted(
+        group,
+        key=lambda item: (
+            item.status != "ok",
+            not item.has_limits,
+            item.label != "default",
+        ),
+    )
+    return ranked[0]
 
 
 def build_report(

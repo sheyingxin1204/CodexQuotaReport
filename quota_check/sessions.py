@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import re
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
@@ -64,8 +66,21 @@ def iter_recent_session_files(code_home: Path, max_files: int = 30) -> list[Path
         files = list(sessions_root.rglob("*.jsonl"))
     except OSError:
         return []
-    files.sort(key=lambda item: item.stat().st_mtime, reverse=True)
+    files.sort(key=_file_sort_time, reverse=True)
     return files[:max_files]
+
+
+def _file_sort_time(path: Path) -> float:
+    match = re.search(r"(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2})", path.name)
+    if match:
+        try:
+            return datetime.strptime(match.group(1), "%Y-%m-%dT%H-%M-%S").timestamp()
+        except ValueError:
+            pass
+    try:
+        return path.stat().st_mtime
+    except OSError:
+        return 0.0
 
 
 def parse_limit_object(obj: Any, source: str) -> Optional[RateLimit]:
@@ -114,6 +129,30 @@ def find_latest_rate_limit_event(
             ):
                 continue
             return item, file_path
+    return None, None
+
+
+def find_usage_limit_error(
+    code_home: Path, config: AppConfig
+) -> tuple[Optional[dict[str, Any]], Optional[Path]]:
+    for file_path in iter_recent_session_files(code_home, config.max_session_files):
+        for line in reversed(read_tail_lines(file_path, config.tail_lines)):
+            try:
+                item = json.loads(line)
+            except (json.JSONDecodeError, ValueError):
+                continue
+            if not isinstance(item, dict) or item.get("type") != "event_msg":
+                continue
+            payload = item.get("payload")
+            if not isinstance(payload, dict) or payload.get("type") != "task_complete":
+                continue
+            error = payload.get("error")
+            if not isinstance(error, dict):
+                continue
+            codex_info = str(error.get("codex_error_info") or "")
+            message = str(error.get("message") or "")
+            if "usage_limit" in codex_info.lower() or "usage limit" in message.lower():
+                return item, file_path
     return None, None
 
 
@@ -191,7 +230,7 @@ def load_account_snapshot(
     config: AppConfig,
 ) -> AccountSnapshot:
     event, source_path = find_latest_rate_limit_event(code_home, config)
-    return build_snapshot_from_event(
+    snapshot = build_snapshot_from_event(
         code_home,
         label,
         discovered_from,
@@ -199,3 +238,26 @@ def load_account_snapshot(
         source_path,
         auth_info,
     )
+    usage_error, usage_path = find_usage_limit_error(code_home, config)
+    if usage_error is not None:
+        error_at = iso_to_datetime(usage_error.get("timestamp"))
+        should_mark_exhausted = event is None
+        if not should_mark_exhausted and error_at is not None:
+            should_mark_exhausted = (
+                snapshot.snapshot_at_utc is None
+                or error_at > snapshot.snapshot_at_utc
+            )
+        if should_mark_exhausted:
+            snapshot.status = "ok"
+            snapshot.error = None
+            existing = snapshot.weekly
+            snapshot.weekly = RateLimit(
+                window_minutes=existing.window_minutes if existing else None,
+                used_percent=100.0,
+                resets_at_unix=existing.resets_at_unix if existing else None,
+                source="session_error",
+            )
+            snapshot.refresh_message = "usage limit reached (0% remaining)"
+            snapshot.snapshot_at_utc = error_at
+            snapshot.source_path = usage_path or snapshot.source_path
+    return snapshot

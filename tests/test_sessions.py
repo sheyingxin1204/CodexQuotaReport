@@ -84,6 +84,41 @@ class SessionTests(unittest.TestCase):
         self.assertEqual(snapshot.status, "no_data")
         self.assertIn("No token_count", snapshot.error or "")
 
+    def test_load_snapshot_detects_usage_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            code_home = Path(directory) / ".codex"
+            session_dir = code_home / "sessions" / "2026" / "08"
+            session_dir.mkdir(parents=True)
+            event = make_event()
+            task_complete = {
+                "timestamp": "2026-08-02T12:00:00Z",
+                "type": "event_msg",
+                "payload": {
+                    "type": "task_complete",
+                    "error": {
+                        "message": "You've hit your usage limit. Upgrade to Plus.",
+                        "codex_error_info": "usage_limit_exceeded",
+                    },
+                },
+            }
+            (session_dir / "rollout.jsonl").write_text(
+                json.dumps(event) + "\n" + json.dumps(task_complete) + "\n",
+                encoding="utf-8",
+            )
+            snapshot = load_account_snapshot(
+                code_home,
+                "default",
+                "default",
+                {"email": "a@b.c", "plan_type": "free"},
+                AppConfig(),
+            )
+        self.assertEqual(snapshot.status, "ok")
+        self.assertIsNotNone(snapshot.weekly)
+        assert snapshot.weekly is not None
+        self.assertEqual(snapshot.weekly.used_percent, 100.0)
+        self.assertEqual(snapshot.weekly.remaining_percent, 0.0)
+        self.assertEqual(snapshot.weekly.window_minutes, 10080)
+
 
 if __name__ == "__main__":
     unittest.main()

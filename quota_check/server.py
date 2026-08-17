@@ -19,7 +19,7 @@ from .auth import read_auth_info
 from .config import AppConfig, save_config
 from .export import export_csv_bytes, export_json_bytes, export_xlsx_bytes, build_rows
 from .refresh import find_codex_executable, refresh_account
-from .report import ReportResult, build_report
+from .report import ReportResult, apply_refresh_result, build_report
 from .sessions import load_account_snapshot
 
 
@@ -136,11 +136,7 @@ class QuotaState:
                 auth_info,
                 self.config,
             )
-            snapshot.refreshed = result.ok
-            snapshot.refresh_message = result.message
-            if not result.ok:
-                snapshot.error = (snapshot.error or "") + " | " + result.message
-                snapshot.status = "error"
+            apply_refresh_result(snapshot, result)
             with self.lock:
                 if self.report is not None:
                     for index, existing in enumerate(self.report.snapshots):

@@ -1,5 +1,5 @@
 #define MyAppName "自检额度"
-#define MyAppVersion "0.6.1"
+#define MyAppVersion "0.6.2"
 #define MyAppExeName "QuotaSelfCheck.exe"
 #define MyAppPublisher "sheyingxin1204"
 

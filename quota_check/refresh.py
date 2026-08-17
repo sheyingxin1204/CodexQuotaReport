@@ -17,6 +17,7 @@ class RefreshResult:
     message: str
     exit_code: Optional[int] = None
     elapsed_seconds: Optional[float] = None
+    exhausted: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -25,7 +26,16 @@ class RefreshResult:
             "message": self.message,
             "exit_code": self.exit_code,
             "elapsed_seconds": self.elapsed_seconds,
+            "exhausted": self.exhausted,
         }
+
+
+def _detect_usage_limit(output: str) -> bool:
+    return re.search(
+        r"hit your usage limit|usage limit reached|rate limit reached",
+        output,
+        re.IGNORECASE,
+    ) is not None
 
 
 def find_codex_executable() -> Optional[Path]:
@@ -146,16 +156,21 @@ def refresh_account(code_home: Path, timeout_seconds: int = 60) -> RefreshResult
 
     after_mtime = latest_session_mtime(code_home)
     wrote_event = after_mtime > before_mtime
-    ok = exit_code == 0 or wrote_event
+    usage_limit_hit = _detect_usage_limit(output)
+    ok = exit_code == 0 or wrote_event or usage_limit_hit
     summary = output.strip().splitlines()
     tail = " | ".join(summary[-3:])[:500] if summary else ""
-    message = "rate limit event refreshed" if wrote_event else tail or "no new event written"
+    if usage_limit_hit:
+        message = "usage limit reached (0% remaining)"
+    else:
+        message = "rate limit event refreshed" if wrote_event else tail or "no new event written"
     return RefreshResult(
         code_home=code_home,
         ok=ok,
         message=message,
         exit_code=exit_code,
         elapsed_seconds=round(elapsed, 2),
+        exhausted=usage_limit_hit,
     )
 
 

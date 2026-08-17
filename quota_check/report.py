@@ -9,7 +9,7 @@ from typing import Any, Callable, Optional
 from .auth import read_auth_info
 from .config import AppConfig
 from .discovery import CodeHomeCandidate, discover_code_homes
-from .models import AccountSnapshot
+from .models import AccountSnapshot, RateLimit
 from .refresh import RefreshResult, find_codex_executable, refresh_account
 from .sessions import load_account_snapshot
 
@@ -114,6 +114,29 @@ def _pick_primary(group: list[AccountSnapshot]) -> AccountSnapshot:
     return ranked[0]
 
 
+def apply_refresh_result(
+    snapshot: AccountSnapshot,
+    result: RefreshResult,
+) -> AccountSnapshot:
+    snapshot.refreshed = result.ok
+    snapshot.refresh_message = result.message
+    if result.exhausted:
+        snapshot.status = "ok"
+        snapshot.error = None
+        existing = snapshot.weekly
+        snapshot.weekly = RateLimit(
+            window_minutes=existing.window_minutes if existing else None,
+            used_percent=100.0,
+            resets_at_unix=existing.resets_at_unix if existing else None,
+            source="refresh",
+        )
+        return snapshot
+    if not result.ok:
+        snapshot.error = (snapshot.error or "") + " | " + result.message
+        snapshot.status = "error"
+    return snapshot
+
+
 def build_report(
     config: AppConfig,
     refresh: bool = False,
@@ -149,11 +172,7 @@ def build_report(
             config,
         )
         if refresh_result is not None:
-            snapshot.refreshed = refresh_result.ok
-            snapshot.refresh_message = refresh_result.message
-            if not refresh_result.ok:
-                snapshot.error = (snapshot.error or "") + " | " + refresh_result.message
-                snapshot.status = "error"
+            apply_refresh_result(snapshot, refresh_result)
         return snapshot
 
     workers = max(1, min(4, len(candidates)))

@@ -305,31 +305,22 @@
       var primaryText = el("span", "related-name", "当前目录 · " + account.label);
       primaryText.title = account.code_home;
       primaryRow.appendChild(primaryText);
-      primaryRow.appendChild(
-        makeRefreshButton(account.code_home, isAccountRefreshing(account.code_home))
-      );
-      primaryRow.appendChild(makeAuthButton(account.code_home));
       relatedBox.appendChild(primaryRow);
       account.related.forEach(function (item) {
         var row = el("div", "related-row");
         var text = el("span", "related-name", (item.alias || item.label) + " · " + item.label);
         text.title = item.code_home;
         row.appendChild(text);
-        row.appendChild(
-          makeRefreshButton(item.code_home, isAccountRefreshing(item.code_home))
-        );
-        row.appendChild(makeAuthButton(item.code_home));
         relatedBox.appendChild(row);
       });
       card.appendChild(relatedBox);
-    } else {
-      var actionRow = el("div", "card-action");
-      actionRow.appendChild(
-        makeRefreshButton(account.code_home, isAccountRefreshing(account.code_home))
-      );
-      actionRow.appendChild(makeAuthButton(account.code_home));
-      card.appendChild(actionRow);
     }
+    var actionRow = el("div", "card-action");
+    actionRow.appendChild(
+      makeRefreshButton(account.code_home, isAccountRefreshing(account.code_home))
+    );
+    actionRow.appendChild(makeAuthButton(account.code_home));
+    card.appendChild(actionRow);
 
     if (account.error) {
       card.appendChild(el("div", "error-box", account.error));

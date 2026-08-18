@@ -8,7 +8,9 @@
     planFilter: "",
     statusFilter: "",
     sort: "email",
-    pollTimer: null
+    pollTimer: null,
+    refreshRequested: false,
+    pendingAccounts: {}
   };
 
   var severityText = {
@@ -135,6 +137,8 @@
     button.disabled = !!refreshing;
     button.appendChild(refreshIcon());
     button.addEventListener("click", function () {
+      state.pendingAccounts[codeHome] = true;
+      render();
       fetch("/api/refresh-account", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -145,9 +149,15 @@
       })
       .then(function (data) {
         if (!data.started) {
+          delete state.pendingAccounts[codeHome];
           showToast("该账号正在刷新或尚未加载完成", true);
         }
         fetchState();
+      })
+      .catch(function () {
+        delete state.pendingAccounts[codeHome];
+        render();
+        showToast("请求失败，无法刷新此账号", true);
       });
     });
     return button;
@@ -273,7 +283,12 @@
     var alias = aliasMap[account.code_home] || "";
     details.appendChild(detail("快捷方式", alias || account.label));
     details.appendChild(detail("套餐", account.plan_type || "未知"));
-    details.appendChild(detail("更新时间", fmtTime(account.snapshot_at_utc)));
+    var primaryReset = account.weekly && account.weekly.resets_at_unix
+      ? fmtReset(account.weekly.resets_at_unix)
+      : account.five_hour && account.five_hour.resets_at_unix
+        ? fmtReset(account.five_hour.resets_at_unix)
+        : "未知";
+    details.appendChild(detail("额度重置", primaryReset));
     details.appendChild(
       detail(
         "累计 tokens",
@@ -286,6 +301,15 @@
     if (account.related && account.related.length) {
       var relatedBox = el("div", "related-box");
       relatedBox.appendChild(el("div", "related-title", "关联目录"));
+      var primaryRow = el("div", "related-row");
+      var primaryText = el("span", "related-name", "当前目录 · " + account.label);
+      primaryText.title = account.code_home;
+      primaryRow.appendChild(primaryText);
+      primaryRow.appendChild(
+        makeRefreshButton(account.code_home, isAccountRefreshing(account.code_home))
+      );
+      primaryRow.appendChild(makeAuthButton(account.code_home));
+      relatedBox.appendChild(primaryRow);
       account.related.forEach(function (item) {
         var row = el("div", "related-row");
         var text = el("span", "related-name", (item.alias || item.label) + " · " + item.label);
@@ -298,13 +322,14 @@
         relatedBox.appendChild(row);
       });
       card.appendChild(relatedBox);
+    } else {
+      var actionRow = el("div", "card-action");
+      actionRow.appendChild(
+        makeRefreshButton(account.code_home, isAccountRefreshing(account.code_home))
+      );
+      actionRow.appendChild(makeAuthButton(account.code_home));
+      card.appendChild(actionRow);
     }
-    var actionRow = el("div", "card-action");
-    actionRow.appendChild(
-      makeRefreshButton(account.code_home, isAccountRefreshing(account.code_home))
-    );
-    actionRow.appendChild(makeAuthButton(account.code_home));
-    card.appendChild(actionRow);
 
     if (account.error) {
       card.appendChild(el("div", "error-box", account.error));
@@ -323,7 +348,7 @@
     var table = el("table");
     var thead = el("thead");
     var headRow = el("tr");
-    ["邮箱", "快捷方式", "套餐", "主额度", "主额度重置", "5小时", "5小时重置", "更新时间", "状态", "操作"].forEach(function (label) {
+    ["邮箱", "快捷方式", "套餐", "主额度", "主额度重置", "5小时", "5小时重置", "读取时间", "状态", "操作"].forEach(function (label) {
       headRow.appendChild(el("th", "", label));
     });
     thead.appendChild(headRow);
@@ -533,7 +558,10 @@
 
   function renderHeaderAndProgress() {
     var data = state.data;
+    var progress = document.getElementById("progressPanel");
     if (!data) {
+      progress.classList.remove("hidden");
+      document.getElementById("progressText").textContent = "正在扫描本地账号...";
       return;
     }
     document.getElementById("versionLine").textContent =
@@ -578,15 +606,19 @@
       lowBanner.textContent = "";
     }
 
-    var progress = document.getElementById("progressPanel");
-    if (data.refreshing) {
+    var loading = data.refreshing || state.refreshRequested;
+    if (loading) {
       progress.classList.remove("hidden");
-      var last = data.progress_log[data.progress_log.length - 1] || "正在加载...";
+      var last = data.refreshing
+        ? data.progress_log[data.progress_log.length - 1] || "正在刷新额度..."
+        : "正在开始刷新额度...";
       document.getElementById("progressText").textContent = last;
       document.getElementById("refreshBtn").disabled = true;
+      document.getElementById("refreshBtn").classList.add("spinning");
     } else {
       progress.classList.add("hidden");
       document.getElementById("refreshBtn").disabled = false;
+      document.getElementById("refreshBtn").classList.remove("spinning");
     }
   }
 
@@ -605,6 +637,13 @@
       })
       .then(function (data) {
         state.data = data;
+        state.refreshRequested = !!data.refreshing;
+        var activeAccounts = data.refreshing_accounts || [];
+        Object.keys(state.pendingAccounts).forEach(function (codeHome) {
+          if (activeAccounts.indexOf(codeHome) < 0) {
+            delete state.pendingAccounts[codeHome];
+          }
+        });
         render();
         updatePolling();
         return data;
@@ -618,7 +657,8 @@
     var data = state.data;
     var shouldPoll =
       data &&
-      (data.refreshing ||
+      (state.refreshRequested ||
+        data.refreshing ||
         (data.refreshing_accounts && data.refreshing_accounts.length > 0));
     if (shouldPoll && !state.pollTimer) {
       state.pollTimer = setInterval(fetchState, 1500);
@@ -659,12 +699,23 @@
       renderAccounts();
     });
     document.getElementById("refreshBtn").addEventListener("click", function () {
+      state.refreshRequested = true;
+      render();
       fetch("/api/refresh", { method: "POST" })
         .then(function (response) {
           return response.json();
         })
-        .then(function () {
+        .then(function (data) {
+          if (!data.started) {
+            state.refreshRequested = false;
+            showToast("刷新已在进行中", true);
+          }
           fetchState();
+        })
+        .catch(function () {
+          state.refreshRequested = false;
+          render();
+          showToast("请求失败，无法开始刷新", true);
         });
     });
   }
@@ -791,6 +842,7 @@
   function isAccountRefreshing(codeHome) {
     var data = state.data;
     return !!(
+      state.pendingAccounts[codeHome] ||
       data &&
       data.refreshing_accounts &&
       data.refreshing_accounts.indexOf(codeHome) >= 0

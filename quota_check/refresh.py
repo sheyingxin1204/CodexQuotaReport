@@ -5,6 +5,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
@@ -18,6 +19,7 @@ class RefreshResult:
     exit_code: Optional[int] = None
     elapsed_seconds: Optional[float] = None
     exhausted: bool = False
+    attempts: int = 1
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -27,6 +29,7 @@ class RefreshResult:
             "exit_code": self.exit_code,
             "elapsed_seconds": self.elapsed_seconds,
             "exhausted": self.exhausted,
+            "attempts": self.attempts,
         }
 
 
@@ -98,7 +101,32 @@ def latest_session_mtime(code_home: Path) -> float:
     return newest
 
 
+MAX_REFRESH_ATTEMPTS = 3
+RETRY_DELAY_SECONDS = 0.8
+
+
 def refresh_account(code_home: Path, timeout_seconds: int = 60) -> RefreshResult:
+    """Refresh one account, retrying transient CLI failures a couple of times."""
+    overall_started = time.monotonic()
+    last_result: Optional[RefreshResult] = None
+    for attempt in range(1, MAX_REFRESH_ATTEMPTS + 1):
+        result = _refresh_account_once(code_home, timeout_seconds)
+        result.attempts = attempt
+        last_result = result
+        if result.ok or result.exhausted or attempt == MAX_REFRESH_ATTEMPTS:
+            result.elapsed_seconds = round(time.monotonic() - overall_started, 2)
+            if attempt > 1:
+                if result.ok:
+                    result.message = f"重试 {attempt - 1} 次后{result.message}"
+                else:
+                    result.message = f"重试 {attempt - 1} 次后仍失败：{result.message}"
+            return result
+        time.sleep(RETRY_DELAY_SECONDS)
+    assert last_result is not None
+    return last_result
+
+
+def _refresh_account_once(code_home: Path, timeout_seconds: int = 60) -> RefreshResult:
     exe = find_codex_executable()
     if exe is None:
         return RefreshResult(
@@ -113,8 +141,6 @@ def refresh_account(code_home: Path, timeout_seconds: int = 60) -> RefreshResult
     args = ["exec", "--skip-git-repo-check", "--ignore-user-config", "--json", "/status"]
     command = _command_for(exe, args)
     before_mtime = latest_session_mtime(code_home)
-
-    import time
 
     started = time.monotonic()
     process: Optional[subprocess.Popen[bytes]] = None

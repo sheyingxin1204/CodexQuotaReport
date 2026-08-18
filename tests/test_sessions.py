@@ -119,6 +119,35 @@ class SessionTests(unittest.TestCase):
         self.assertEqual(snapshot.weekly.remaining_percent, 0.0)
         self.assertEqual(snapshot.weekly.window_minutes, 10080)
 
+    def test_usage_limit_error_provides_reset_time(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            code_home = Path(directory) / ".codex"
+            session_dir = code_home / "sessions" / "2026" / "08"
+            session_dir.mkdir(parents=True)
+            task_complete = {
+                "timestamp": "2026-08-18T02:41:52Z",
+                "type": "event_msg",
+                "payload": {
+                    "type": "task_complete",
+                    "error": {
+                        "message": "You've hit your usage limit; try again at Sep 11th, 2026 11:27 AM.",
+                        "codex_error_info": "usage_limit_exceeded",
+                    },
+                },
+            }
+            (session_dir / "rollout-2026-08-18T10-41-47.jsonl").write_text(
+                json.dumps(task_complete) + "\n",
+                encoding="utf-8",
+            )
+            snapshot = load_account_snapshot(
+                code_home, "default", "default", {}, AppConfig()
+            )
+        self.assertEqual(snapshot.status, "ok")
+        self.assertIsNotNone(snapshot.weekly)
+        assert snapshot.weekly is not None
+        self.assertEqual(snapshot.weekly.used_percent, 100.0)
+        self.assertIsNotNone(snapshot.weekly.resets_at_unix)
+
 
 if __name__ == "__main__":
     unittest.main()

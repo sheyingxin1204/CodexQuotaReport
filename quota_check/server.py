@@ -63,12 +63,12 @@ class QuotaState:
             if len(self.progress_log) > 200:
                 self.progress_log = self.progress_log[-200:]
 
-    def start_load(self, refresh: Optional[bool] = None) -> None:
+    def start_load(self, refresh: Optional[bool] = None) -> bool:
         if refresh is None:
             refresh = self.config.refresh_on_start
         with self.lock:
             if self.refreshing:
-                return
+                return False
             self.refreshing = True
             self.progress_log = []
         thread = threading.Thread(
@@ -78,6 +78,7 @@ class QuotaState:
             name="quota-check-load",
         )
         thread.start()
+        return True
 
     def _run_load(self, refresh: bool) -> None:
         try:
@@ -343,8 +344,8 @@ def _make_handler(state: QuotaState) -> type[BaseHTTPRequestHandler]:
                 return
 
             if parsed.path == "/api/refresh":
-                state.start_load(refresh=True)
-                self._send_json({"started": True})
+                started = state.start_load(refresh=True)
+                self._send_json({"started": started})
                 return
             if parsed.path == "/api/refresh-account":
                 code_home = str(payload.get("code_home") or "")

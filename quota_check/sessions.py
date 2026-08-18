@@ -19,6 +19,21 @@ def _as_int(value: Any) -> Optional[int]:
         return None
 
 
+def _as_unix(value: Any) -> Optional[int]:
+    parsed = _as_int(value)
+    if parsed is not None:
+        return parsed
+    if value is None:
+        return None
+    moment = iso_to_datetime(value)
+    if moment is None:
+        return None
+    try:
+        return int(moment.timestamp())
+    except (OverflowError, OSError, ValueError):
+        return None
+
+
 def _as_float(value: Any) -> Optional[float]:
     if value is None:
         return None
@@ -83,13 +98,39 @@ def _file_sort_time(path: Path) -> float:
         return 0.0
 
 
+def _event_sort_time(item: dict[str, Any], path: Path) -> float:
+    moment = iso_to_datetime(item.get("timestamp"))
+    if moment is not None:
+        try:
+            return moment.timestamp()
+        except (OverflowError, OSError, ValueError):
+            pass
+    return _file_sort_time(path)
+
+
+def _file_may_contain_newer(path: Path, latest_time: float) -> bool:
+    """Only inspect older files when they were modified after the latest event."""
+    if _file_sort_time(path) > latest_time:
+        return True
+    try:
+        return path.stat().st_mtime > latest_time + 1.0
+    except OSError:
+        return False
+
+
 def parse_limit_object(obj: Any, source: str) -> Optional[RateLimit]:
     if not isinstance(obj, dict):
         return None
     window = _as_int(obj.get("window_minutes"))
     used = _as_float(obj.get("used_percent"))
-    remaining = _as_float(obj.get("remaining_percent") or obj.get("remaining"))
-    resets = _as_int(obj.get("resets_at") or obj.get("reset_at"))
+    remaining_value = obj.get("remaining_percent")
+    if remaining_value is None:
+        remaining_value = obj.get("remaining")
+    remaining = _as_float(remaining_value)
+    resets_value = obj.get("resets_at")
+    if resets_value is None:
+        resets_value = obj.get("reset_at")
+    resets = _as_unix(resets_value)
     if window is None and used is None and remaining is None and resets is None:
         return None
     if remaining is None:
@@ -107,7 +148,15 @@ def parse_limit_object(obj: Any, source: str) -> Optional[RateLimit]:
 def find_latest_rate_limit_event(
     code_home: Path, config: AppConfig
 ) -> tuple[Optional[dict[str, Any]], Optional[Path]]:
-    for file_path in iter_recent_session_files(code_home, config.max_session_files):
+    latest: Optional[tuple[float, dict[str, Any], Path]] = None
+    files = iter_recent_session_files(code_home, config.max_session_files)
+    for index, file_path in enumerate(files):
+        if (
+            latest is not None
+            and index > 0
+            and not _file_may_contain_newer(file_path, latest[0])
+        ):
+            break
         for line in reversed(read_tail_lines(file_path, config.tail_lines)):
             try:
                 item = json.loads(line)
@@ -128,14 +177,27 @@ def find_latest_rate_limit_event(
                 for name in ("primary", "secondary", "individual_limit")
             ):
                 continue
-            return item, file_path
-    return None, None
+            candidate = (_event_sort_time(item, file_path), item, file_path)
+            if latest is None or candidate[0] > latest[0]:
+                latest = candidate
+            break
+    if latest is None:
+        return None, None
+    return latest[1], latest[2]
 
 
 def find_usage_limit_error(
     code_home: Path, config: AppConfig
 ) -> tuple[Optional[dict[str, Any]], Optional[Path]]:
-    for file_path in iter_recent_session_files(code_home, config.max_session_files):
+    latest: Optional[tuple[float, dict[str, Any], Path]] = None
+    files = iter_recent_session_files(code_home, config.max_session_files)
+    for index, file_path in enumerate(files):
+        if (
+            latest is not None
+            and index > 0
+            and not _file_may_contain_newer(file_path, latest[0])
+        ):
+            break
         for line in reversed(read_tail_lines(file_path, config.tail_lines)):
             try:
                 item = json.loads(line)
@@ -144,16 +206,61 @@ def find_usage_limit_error(
             if not isinstance(item, dict) or item.get("type") != "event_msg":
                 continue
             payload = item.get("payload")
-            if not isinstance(payload, dict) or payload.get("type") != "task_complete":
+            if not isinstance(payload, dict) or payload.get("type") not in (
+                "task_complete",
+                "error",
+            ):
                 continue
-            error = payload.get("error")
+            error = (
+                payload.get("error")
+                if payload.get("type") == "task_complete"
+                else payload
+            )
             if not isinstance(error, dict):
                 continue
             codex_info = str(error.get("codex_error_info") or "")
             message = str(error.get("message") or "")
             if "usage_limit" in codex_info.lower() or "usage limit" in message.lower():
-                return item, file_path
-    return None, None
+                candidate = (_event_sort_time(item, file_path), item, file_path)
+                if latest is None or candidate[0] > latest[0]:
+                    latest = candidate
+                break
+    if latest is None:
+        return None, None
+    return latest[1], latest[2]
+
+
+def _extract_error_reset_unix(item: dict[str, Any]) -> Optional[int]:
+    payload = item.get("payload") or {}
+    if not isinstance(payload, dict):
+        return None
+    error = payload.get("error") if payload.get("type") == "task_complete" else payload
+    if not isinstance(error, dict):
+        return None
+    for key in ("resets_at", "reset_at", "resets_at_unix"):
+        value = _as_unix(error.get(key))
+        if value is not None:
+            return value
+    message = str(error.get("message") or "")
+    match = re.search(
+        r"(?:try again|reset(?:s|ting)?|available)\s+(?:at\s+)?"
+        r"([A-Za-z]{3,9})\s+(\d{1,2})(?:st|nd|rd|th)?[,]?\s+(\d{4})\s+"
+        r"(\d{1,2}:\d{2})\s*(AM|PM)",
+        message,
+        re.IGNORECASE,
+    )
+    if not match:
+        return None
+    try:
+        moment = datetime.strptime(
+            f"{match.group(1)} {match.group(2)}, {match.group(3)} "
+            f"{match.group(4)} {match.group(5).upper()}",
+            "%b %d, %Y %I:%M %p",
+        )
+        moment = moment.replace(tzinfo=datetime.now().astimezone().tzinfo)
+        return int(moment.timestamp())
+    except (ValueError, OverflowError, OSError):
+        return None
 
 
 def build_snapshot_from_event(
@@ -251,13 +358,17 @@ def load_account_snapshot(
             snapshot.status = "ok"
             snapshot.error = None
             existing = snapshot.weekly
+            reset_at = _extract_error_reset_unix(usage_error)
+            if reset_at is None and existing is not None:
+                reset_at = existing.resets_at_unix
             snapshot.weekly = RateLimit(
                 window_minutes=existing.window_minutes if existing else None,
                 used_percent=100.0,
-                resets_at_unix=existing.resets_at_unix if existing else None,
+                resets_at_unix=reset_at,
                 source="session_error",
             )
             snapshot.refresh_message = "usage limit reached (0% remaining)"
-            snapshot.snapshot_at_utc = error_at
+            if error_at is not None:
+                snapshot.snapshot_at_utc = error_at
             snapshot.source_path = usage_path or snapshot.source_path
     return snapshot
